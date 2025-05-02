@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Alertas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    boxShadow: {
+                        'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
+                        'neumorph': '8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff',
+                        'neumorph-inset': 'inset 2px 2px 5px #d1d9e6, inset -2px -2px 5px #ffffff'
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .dark .card-hover:hover {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        .alert-badge {
+            @apply px-2 py-1 rounded-full text-xs font-semibold;
+        }
+        .alert-familiar {
+            @apply bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200;
+        }
+        .alert-individual {
+            @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+        }
+        .alert-colectiva {
+            @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200;
+        }
+        .alert-poblacional {
+            @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+        }
+        .alert-gestion {
+            @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-dark-900 min-h-screen font-sans transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-primary-700">
+                    Sistema de Alertas en Salud
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-2">Gestión inteligente de alertas sanitarias</p>
+            </div>
+            <button id="themeToggle" class="p-2 rounded-full bg-white dark:bg-dark-800 shadow-lg">
+                <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-500 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+            </button>
+        </header>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- File Upload Card -->
+                <div class="glass rounded-2xl p-6 shadow-lg card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
+                            <span class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                Cargar Datos
+                            </span>
+                        </h2>
+                        <span class="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full dark:bg-primary-900 dark:text-primary-200">
+                            Paso 1
+                        </span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-center w-full">
+                            <label for="fileInput" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 dark:bg-dark-800 dark:hover:bg-dark-700 dark:border-gray-600 transition-colors">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mb-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                        <span class="font-semibold">Haz clic para subir</span> o arrastra tu archivo
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Excel (.xlsx, .xls)</p>
+                                </div>
+                                <input id="fileInput" type="file" accept=".xlsx, .xls" class="hidden" />
+                            </label>
+                        </div>
+                        <button id="loadFileBtn" class="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-medium py-3 px-4 rounded-xl transition-all transform hover:scale-[1.01] shadow-md">
+                            Procesar Archivo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Rules Section -->
+                <div id="columnsSection" class="glass rounded-2xl p-6 shadow-lg card-hover hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
+                            <span class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                Configuración de Reglas
+                            </span>
+                        </h2>
+                        <span class="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full dark:bg-primary-900 dark:text-primary-200">
+                            Paso 2
+                        </span>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-3">Columnas Disponibles</h3>
+                        <div id="columnsList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                    </div>
+                    
+                    <button id="showRuleFormBtn" class="w-full flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-3 px-4 rounded-xl transition-all transform hover:scale-[1.01] shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Crear Nueva Regla
+                    </button>
+                </div>
+
+                <!-- Rule Form -->
+                <div id="ruleFormSection" class="glass rounded-2xl p-6 shadow-lg card-hover hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
+                            <span class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Nueva Regla de Alerta
+                            </span>
+                        </h2>
+                    </div>
+                    
+                    <div class="space-y-5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre de la Regla *</label>
+                                <input type="text" id="ruleName" class="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Columna a Evaluar *</label>
+                                <select id="columnToEvaluate" class="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"></select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Condición *</label>
+                                <select id="conditionType" class="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                                    <option value="equals">Igual a</option>
+                                    <option value="contains">Contiene</option>
+                                    <option value="greater">Mayor que</option>
+                                    <option value="less">Menor que</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valor a Comparar *</label>
+                                <input type="text" id="conditionValue" class="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipos de Alerta a Generar *</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="alertFamiliar" value="Familiar" class="h-4 w-4 text-pink-500 focus:ring-pink-500 border-gray-300 dark:border-gray-600 rounded">
+                                    <label for="alertFamiliar" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Alertas Familiares</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="alertIndividual" value="Individual" class="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded">
+                                    <label for="alertIndividual" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Alertas Individuales</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="alertColectiva" value="Colectiva" class="h-4 w-4 text-purple-500 focus:ring-purple-500 border-gray-300 dark:border-gray-600 rounded">
+                                    <label for="alertColectiva" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Alertas Colectivas</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="alertPoblacional" value="Poblacional" class="h-4 w-4 text-green-500 focus:ring-green-500 border-gray-300 dark:border-gray-600 rounded">
+                                    <label for="alertPoblacional" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Alertas Poblacionales</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="alertIntersectorial" value="Intersectorial" class="h-4 w-4 text-indigo-500 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded">
+                                    <label for="alertIntersectorial" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Alertas Intersectoriales</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="alertGestion" value="Gestion" class="h-4 w-4 text-yellow-500 focus:ring-yellow-500 border-gray-300 dark:border-gray-600 rounded">
+                                    <label for="alertGestion" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Acciones en Gestión de Salud</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nivel de Alerta *</label>
+                                <select id="alertLevel" class="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                                    <option value="Urgencia">Urgencia (Inmediato)</option>
+                                    <option value="Alta">Alerta alta (Inmediato hasta 1 mes)</option>
+                                    <option value="Media">Alerta media (1 a 3 meses)</option>
+                                    <option value="Baja">Alerta baja o sin alerta (3 a 6 meses)</option>
+                                    <option value="Protectoras">Capacidades protectoras (Permanente)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logro en Salud *</label>
+                                <select id="healthAchievement" class="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                                    <option value="Sin avance">Sin avance en el alcance del logro</option>
+                                    <option value="Avance inicial">Avance inicial en el logro</option>
+                                    <option value="Avance intermedio">Con avances intermedio en el alcance del logro</option>
+                                    <option value="Logro alcanzado">Logro alcanzado</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Acciones Inmediatas *</label>
+                            <textarea id="immediateActions" rows="3" class="w-full px-4 py-2.5 bg-white dark:bg-dark-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"></textarea>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 pt-2">
+                            <button id="cancelRuleBtn" class="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 font-medium rounded-xl transition-all transform hover:scale-[1.02]">
+                                Cancelar
+                            </button>
+                            <button id="saveRuleBtn" class="px-6 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-medium rounded-xl transition-all transform hover:scale-[1.02] shadow-md">
+                                Guardar Regla
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" class="glass rounded-2xl p-6 shadow-lg card-hover hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
+                            <span class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Resultados de Alertas
+                            </span>
+                        </h2>
+                        <button id="exportAlertsBtn" class="flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-sm font-medium rounded-xl transition-all transform hover:scale-[1.02] shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Exportar
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <table id="resultsTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-800">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documento</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Alertas</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nivel</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Logro</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody" class="bg-white dark:bg-dark-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="noResultsMessage" class="text-center py-8 hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="mt-2 text-lg font-medium text-gray-900 dark:text-white">No se generaron alertas</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Ajusta tus reglas y vuelve a intentarlo.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="space-y-8">
+                <!-- Saved Rules -->
+                <div id="savedRulesSection" class="glass rounded-2xl p-6 shadow-lg card-hover hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
+                            <span class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                </svg>
+                                Reglas Guardadas
+                            </span>
+                        </h2>
+                        <span class="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full dark:bg-primary-900 dark:text-primary-200">
+                            Paso 3
+                        </span>
+                    </div>
+                    
+                    <div class="flex space-x-2 mb-4">
+                        <button id="exportRulesBtn" class="flex-1 flex items-center justify-center px-3 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white text-sm font-medium rounded-xl transition-all transform hover:scale-[1.02] shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Exportar
+                        </button>
+                        <button id="importRulesBtn" class="flex-1 flex items-center justify-center px-3 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl transition-all transform hover:scale-[1.02] shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Importar
+                        </button>
+                        <button id="showTemplatesBtn" class="flex-1 flex items-center justify-center px-3 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white text-sm font-medium rounded-xl transition-all transform hover:scale-[1.02] shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                            </svg>
+                            Plantillas
+                        </button>
+                    </div>
+                    
+                    <div id="savedRulesList" class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                        <!-- Las reglas se insertarán aquí -->
+                    </div>
+                    
+                    <div id="noRulesMessage" class="text-center py-8">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="mt-2 text-lg font-medium text-gray-900 dark:text-white">No hay reglas guardadas</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Crea tu primera regla para comenzar.</p>
+                    </div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="glass rounded-2xl p-6 shadow-lg card-hover">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+                        <span class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            Estadísticas
+                        </span>
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-dark-800 p-4 rounded-xl shadow-sm">
+                            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Reglas</div>
+                            <div id="rulesCount" class="text-2xl font-semibold text-gray-900 dark:text-white">0</div>
+                        </div>
+                        <div class="bg-white dark:bg-dark-800 p-4 rounded-xl shadow-sm">
+                            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Alertas</div>
+                            <div id="alertsCount" class="text-2xl font-semibold text-gray-900 dark:text-white">0</div>
+                        </div>
+                        <div class="bg-white dark:bg-dark-800 p-4 rounded-xl shadow-sm">
+                            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Plantillas</div>
+                            <div id="templatesCount" class="text-2xl font-semibold text-gray-900 dark:text-white">0</div>
+                        </div>
+                        <div class="bg-white dark:bg-dark-800 p-4 rounded-xl shadow-sm">
+                            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Registros</div>
+                            <div id="recordsCount" class="text-2xl font-semibold text-gray-900 dark:text-white">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="glass rounded-2xl p-6 shadow-lg card-hover">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">
+                        <span class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Acciones Rápidas
+                        </span>
+                    </h2>
+                    
+                    <div class="space-y-3">
+                        <button id="generateAlertsBtn" class="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-xl transition-all transform hover:scale-[1.01] shadow-md">
+                            <span>Generar Alertas</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </button>
+                        
+                        <button id="clearDataBtn" class="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl transition-all transform hover:scale-[1.01] shadow-md">
+                            <span>Limpiar Datos</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates Modal -->
+    <div id="templatesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 flex items-center justify-center hidden z-50 transition-opacity">
+        <div class="bg-white dark:bg-dark-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto transform transition-all">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Plantillas Guardadas</h3>
+                    <button id="closeTemplatesModal" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div id="templatesList" class="space-y-3"></div>
+                
+                <div class="mt-6">
+                    <button id="saveCurrentAsTemplate" class="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-medium rounded-xl transition-all transform hover:scale-[1.01] shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
+                        Guardar Configuración Actual como Plantilla
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Rules Input -->
+    <input type="file" id="importRulesInput" accept=".json" class="hidden">
+
+    <script>
+        // Variables globales
+        let workbookData = null;
+        let worksheetData = null;
+        let columns = [];
+        let rules = JSON.parse(localStorage.getItem('alertRules')) || [];
+        let templates = JSON.parse(localStorage.getItem('alertTemplates')) || [];
+        let alertResults = [];
+        
+        // Elementos del DOM
+        const fileInput = document.getElementById('fileInput');
+        const loadFileBtn = document.getElementById('loadFileBtn');
+        const columnsSection = document.getElementById('columnsSection');
+        const columnsList = document.getElementById('columnsList');
+        const showRuleFormBtn = document.getElementById('showRuleFormBtn');
+        const ruleFormSection = document.getElementById('ruleFormSection');
+        const savedRulesSection = document.getElementById('savedRulesSection');
+        const savedRulesList = document.getElementById('savedRulesList');
+        const noRulesMessage = document.getElementById('noRulesMessage');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const noResultsMessage = document.getElementById('noResultsMessage');
+        const templatesModal = document.getElementById('templatesModal');
+        const showTemplatesBtn = document.getElementById('showTemplatesBtn');
+        const closeTemplatesModal = document.getElementById('closeTemplatesModal');
+        const templatesList = document.getElementById('templatesList');
+        const saveCurrentAsTemplate = document.getElementById('saveCurrentAsTemplate');
+        const exportAlertsBtn = document.getElementById('exportAlertsBtn');
+        const exportRulesBtn = document.getElementById('exportRulesBtn');
+        const importRulesBtn = document.getElementById('importRulesBtn');
+        const importRulesInput = document.getElementById('importRulesInput');
+        const generateAlertsBtn = document.getElementById('generateAlertsBtn');
+        const clearDataBtn = document.getElementById('clearDataBtn');
+        const themeToggle = document.getElementById('themeToggle');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+        
+        // Stats elements
+        const rulesCount = document.getElementById('rulesCount');
+        const alertsCount = document.getElementById('alertsCount');
+        const templatesCount = document.getElementById('templatesCount');
+        const recordsCount = document.getElementById('recordsCount');
+        
+        // Elementos del formulario de reglas
+        const ruleName = document.getElementById('ruleName');
+        const columnToEvaluate = document.getElementById('columnToEvaluate');
+        const conditionType = document.getElementById('conditionType');
+        const conditionValue = document.getElementById('conditionValue');
+        const alertFamiliar = document.getElementById('alertFamiliar');
+        const alertIndividual = document.getElementById('alertIndividual');
+        const alertColectiva = document.getElementById('alertColectiva');
+        const alertPoblacional = document.getElementById('alertPoblacional');
+        const alertIntersectorial = document.getElementById('alertIntersectorial');
+        const alertGestion = document.getElementById('alertGestion');
+        const alertLevel = document.getElementById('alertLevel');
+        const immediateActions = document.getElementById('immediateActions');
+        const healthAchievement = document.getElementById('healthAchievement');
+        const saveRuleBtn = document.getElementById('saveRuleBtn');
+        const cancelRuleBtn = document.getElementById('cancelRuleBtn');
+        
+        // Event Listeners
+        loadFileBtn.addEventListener('click', processFile);
+        showRuleFormBtn.addEventListener('click', showRuleForm);
+        saveRuleBtn.addEventListener('click', saveRule);
+        cancelRuleBtn.addEventListener('click', cancelRuleForm);
+        showTemplatesBtn.addEventListener('click', showTemplatesModal);
+        closeTemplatesModal.addEventListener('click', hideTemplatesModal);
+        saveCurrentAsTemplate.addEventListener('click', saveCurrentRulesAsTemplate);
+        exportAlertsBtn.addEventListener('click', exportAlertsToExcel);
+        exportRulesBtn.addEventListener('click', exportRulesToJson);
+        importRulesBtn.addEventListener('click', () => importRulesInput.click());
+        importRulesInput.addEventListener('change', importRulesFromJson);
+        generateAlertsBtn.addEventListener('click', generateAlerts);
+        clearDataBtn.addEventListener('click', clearAllData);
+        themeToggle.addEventListener('click', toggleTheme);
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSavedRulesList();
+            updateStats();
+            initTheme();
+            
+            if (rules.length > 0) {
+                savedRulesSection.classList.remove('hidden');
+                noRulesMessage.classList.add('hidden');
+            }
+        });
+        
+        // Funciones del tema
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            }
+        }
+        
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            }
+        }
+        
+        // Funciones principales
+        function processFile() {
+            const file = fileInput.files[0];
+            if (!file) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Por favor selecciona un archivo primero',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    workbookData = XLSX.read(data, { type: 'array' });
+                    
+                    // Tomamos la primera hoja por defecto
+                    const firstSheetName = workbookData.SheetNames[0];
+                    worksheetData = XLSX.utils.sheet_to_json(workbookData.Sheets[firstSheetName]);
+                    
+                    // Extraemos las columnas
+                    if (worksheetData.length > 0) {
+                        columns = Object.keys(worksheetData[0]);
+                        displayColumns();
+                        columnsSection.classList.remove('hidden');
+                        savedRulesSection.classList.remove('hidden');
+                        updateStats();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'El archivo no contiene datos',
+                            confirmButtonText: 'Entendido'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error al procesar el archivo:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: 'Error al procesar el archivo<br><br><code>' + error.message + '</code>',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+            };
+            reader.onerror = function() {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al leer el archivo',
+                    confirmButtonText: 'Entendido'
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function displayColumns() {
+            columnsList.innerHTML = '';
+            columnToEvaluate.innerHTML = '';
+            
+            columns.forEach(col => {
+                // Mostrar columnas en la lista
+                const columnCard = document.createElement('div');
+                columnCard.className = 'bg-white dark:bg-dark-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm';
+                columnCard.innerHTML = `
+                    <h3 class="font-medium text-gray-800 dark:text-white truncate">${col}</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate">${worksheetData[0][col] || 'Sin datos de ejemplo'}</p>
+                `;
+                columnsList.appendChild(columnCard);
+                
+                // Añadir opción al select
+                const option = document.createElement('option');
+                option.value = col;
+                option.textContent = col;
+                columnToEvaluate.appendChild(option);
+            });
+        }
+        
+        function showRuleForm() {
+            ruleFormSection.classList.remove('hidden');
+            // Desplazarse suavemente al formulario
+            ruleFormSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function cancelRuleForm() {
+            ruleFormSection.classList.add('hidden');
+            resetRuleForm();
+        }
+        
+        function resetRuleForm() {
+            ruleName.value = '';
+            columnToEvaluate.selectedIndex = 0;
+            conditionType.selectedIndex = 0;
+            conditionValue.value = '';
+            alertFamiliar.checked = false;
+            alertIndividual.checked = false;
+            alertColectiva.checked = false;
+            alertPoblacional.checked = false;
+            alertIntersectorial.checked = false;
+            alertGestion.checked = false;
+            alertLevel.selectedIndex = 0;
+            immediateActions.value = '';
+            healthAchievement.selectedIndex = 0;
+        }
+        
+        function saveRule() {
+            const name = ruleName.value.trim();
+            const column = columnToEvaluate.value;
+            const condition = conditionType.value;
+            const value = conditionValue.value.trim();
+            
+            if (!name || !column || !value) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Por favor completa todos los campos requeridos',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+            
+            // Obtener tipos de alerta seleccionados
+            const alertTypes = [];
+            if (alertFamiliar.checked) alertTypes.push('Familiar');
+            if (alertIndividual.checked) alertTypes.push('Individual');
+            if (alertColectiva.checked) alertTypes.push('Colectiva');
+            if (alertPoblacional.checked) alertTypes.push('Poblacional');
+            if (alertIntersectorial.checked) alertTypes.push('Intersectorial');
+            if (alertGestion.checked) alertTypes.push('Gestion');
+            
+            if (alertTypes.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Selecciona al menos un tipo de alerta',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+            
+            const newRule = {
+                id: Date.now(),
+                name,
+                column,
+                condition,
+                value,
+                alertTypes,
+                alertLevel: alertLevel.value,
+                immediateActions: immediateActions.value,
+                healthAchievement: healthAchievement.value,
+                createdAt: new Date().toISOString()
+            };
+            
+            rules.push(newRule);
+            saveRulesToLocalStorage();
+            updateSavedRulesList();
+            cancelRuleForm();
+            updateStats();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Éxito',
+                text: 'Regla guardada correctamente',
+                confirmButtonText: 'Entendido'
+            });
+        }
+        
+        function saveRulesToLocalStorage() {
+            localStorage.setItem('alertRules', JSON.stringify(rules));
+        }
+        
+        function updateSavedRulesList() {
+            savedRulesList.innerHTML = '';
+            
+            if (rules.length === 0) {
+                noRulesMessage.classList.remove('hidden');
+                return;
+            }
+            
+            noRulesMessage.classList.add('hidden');
+            
+            rules.forEach(rule => {
+                const ruleElement = document.createElement('div');
+                ruleElement.className = 'bg-white dark:bg-dark-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm card-hover';
+                ruleElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-sm font-medium text-gray-800 dark:text-white truncate">${rule.name}</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Si <span class="font-medium">${rule.column}</span> 
+                                ${getConditionText(rule.condition)} 
+                                "<span class="font-medium">${rule.value}</span>"
+                            </p>
+                            <div class="flex flex-wrap gap-1 mt-2">
+                                ${rule.alertTypes.map(type => `
+                                    <span class="${getAlertBadgeClass(type)}">${type}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="flex space-x-1 ml-2">
+                            <button class="edit-rule p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 rounded-full" data-id="${rule.id}" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button class="delete-rule p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 rounded-full" data-id="${rule.id}" title="Eliminar">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                savedRulesList.appendChild(ruleElement);
+            });
+            
+            // Añadir event listeners para los botones de editar y eliminar
+            document.querySelectorAll('.edit-rule').forEach(btn => {
+                btn.addEventListener('click', (e) => editRule(e.target.closest('button').dataset.id));
+            });
+            
+            document.querySelectorAll('.delete-rule').forEach(btn => {
+                btn.addEventListener('click', (e) => deleteRule(e.target.closest('button').dataset.id));
+            });
+        }
+        
+        function getConditionText(condition) {
+            switch(condition) {
+                case 'equals': return 'es igual a';
+                case 'contains': return 'contiene';
+                case 'greater': return 'es mayor que';
+                case 'less': return 'es menor que';
+                default: return '';
+            }
+        }
+        
+        function getAlertBadgeClass(type) {
+            switch(type) {
+                case 'Familiar': return 'alert-badge alert-familiar';
+                case 'Individual': return 'alert-badge alert-individual';
+                case 'Colectiva': return 'alert-badge alert-colectiva';
+                case 'Poblacional': return 'alert-badge alert-poblacional';
+                case 'Intersectorial': return 'alert-badge alert-poblacional'; // Mismo estilo que poblacional
+                case 'Gestion': return 'alert-badge alert-gestion';
+                default: return 'alert-badge bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+            }
+        }
+        
+        function editRule(ruleId) {
+            const rule = rules.find(r => r.id == ruleId);
+            if (!rule) return;
+            
+            ruleName.value = rule.name;
+            columnToEvaluate.value = rule.column;
+            conditionType.value = rule.condition;
+            conditionValue.value = rule.value;
+            
+            alertFamiliar.checked = rule.alertTypes.includes('Familiar');
+            alertIndividual.checked = rule.alertTypes.includes('Individual');
+            alertColectiva.checked = rule.alertTypes.includes('Colectiva');
+            alertPoblacional.checked = rule.alertTypes.includes('Poblacional');
+            alertIntersectorial.checked = rule.alertTypes.includes('Intersectorial');
+            alertGestion.checked = rule.alertTypes.includes('Gestion');
+            
+            alertLevel.value = rule.alertLevel;
+            immediateActions.value = rule.immediateActions;
+            healthAchievement.value = rule.healthAchievement;
+            
+            // Eliminar la regla para reemplazarla después
+            rules = rules.filter(r => r.id != ruleId);
+            
+            ruleFormSection.classList.remove('hidden');
+            ruleFormSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function deleteRule(ruleId) {
+            Swal.fire({
+                title: '¿Eliminar regla?',
+                text: "Esta acción no se puede deshacer",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    rules = rules.filter(r => r.id != ruleId);
+                    saveRulesToLocalStorage();
+                    updateSavedRulesList();
+                    updateStats();
+                    Swal.fire('Eliminada', 'La regla ha sido eliminada', 'success');
+                }
+            });
+        }
+        
+        function generateAlerts() {
+            if (!worksheetData || worksheetData.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    html: 'No hay datos cargados para procesar.<br><br>Por favor carga un archivo Excel primero.',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            if (rules.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    html: 'No hay reglas definidas para generar alertas.<br><br>Por favor crea al menos una regla primero.',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            alertResults = [];
+            let conditionMetCount = 0;
+            let columnWarnings = new Set();
+
+            worksheetData.forEach((row, index) => {
+                const rowAlerts = {
+                    id: index + 1,
+                    nombre: getColumnValue(row, ['primernombre', 'PrimerNombre', 'PRIMERNOMBRE']),
+                    apellido: getColumnValue(row, ['columnaprimerApellido', 'primerApellido', 'PrimerApellido', 'PRIMERAPELLIDO']),
+                    documento: getColumnValue(row, ['nroDocumento', 'documento', 'Documento', 'DOCUMENTO']),
+                    fechaNacimiento: getColumnValue(row, ['fechaNacimiento', 'fechanacimiento', 'FechaNacimiento', 'FECHANACIMIENTO']),
+                    municipio: getColumnValue(row, ['municipio', 'Municipio', 'MUNICIPIO']),
+                    alerts: [],
+                    level: '',
+                    actions: [],
+                    achievement: ''
+                };
+
+                rules.forEach(rule => {
+                    // Verificar si la columna existe en el row
+                    if (!(rule.column in row)) {
+                        columnWarnings.add(rule.column);
+                        return;
+                    }
+
+                    let conditionMet = false;
+                    const cellValue = String(row[rule.column] || '').trim().toLowerCase();
+                    const ruleValue = String(rule.value || '').trim().toLowerCase();
+
+                    switch(rule.condition) {
+                        case 'equals':
+                            conditionMet = cellValue === ruleValue;
+                            break;
+                        case 'contains':
+                            conditionMet = cellValue.includes(ruleValue);
+                            break;
+                        case 'greater':
+                            conditionMet = !isNaN(cellValue) && !isNaN(ruleValue) && parseFloat(cellValue) > parseFloat(ruleValue);
+                            break;
+                        case 'less':
+                            conditionMet = !isNaN(cellValue) && !isNaN(ruleValue) && parseFloat(cellValue) < parseFloat(ruleValue);
+                            break;
+                    }
+
+                    if (conditionMet) {
+                        conditionMetCount++;
+                        rowAlerts.alerts.push(...rule.alertTypes);
+                        if (!rowAlerts.level) rowAlerts.level = rule.alertLevel;
+                        if (rule.immediateActions) rowAlerts.actions.push(rule.immediateActions);
+                        if (!rowAlerts.achievement) rowAlerts.achievement = rule.healthAchievement;
+                    }
+                });
+
+                if (rowAlerts.alerts.length > 0) {
+                    alertResults.push(rowAlerts);
+                }
+            });
+
+            // Mostrar advertencias sobre columnas no encontradas
+            if (columnWarnings.size > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Columnas no encontradas',
+                    html: `Las siguientes columnas referenciadas en reglas no se encontraron en los datos:<br><br>
+                          <strong>${Array.from(columnWarnings).join(', ')}</strong><br><br>
+                          Por favor verifica los nombres de las columnas.`,
+                    confirmButtonText: 'Entendido'
+                });
+            }
+
+            if (alertResults.length === 0) {
+                noResultsMessage.classList.remove('hidden');
+                resultsTableBody.innerHTML = '';
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Resultados',
+                    html: `No se generaron alertas con las reglas actuales.<br><br>
+                          <strong>Posibles causas:</strong>
+                          <ul class="text-left pl-5 list-disc">
+                            <li>Las condiciones de las reglas no coinciden con los datos</li>
+                            <li>Los nombres de columnas en las reglas no coinciden exactamente con el archivo</li>
+                            <li>Los valores a comparar no coinciden (incluyendo mayúsculas/minúsculas)</li>
+                          </ul>
+                          <br>Se verificaron ${conditionMetCount} coincidencias de condiciones.`,
+                    confirmButtonText: 'Entendido'
+                });
+            } else {
+                noResultsMessage.classList.add('hidden');
+                displayResults(alertResults);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: `Se generaron ${alertResults.length} alertas`,
+                    confirmButtonText: 'Entendido'
+                });
+            }
+            
+            resultsSection.classList.remove('hidden');
+            updateStats();
+        }
+        
+        function getColumnValue(row, possibleColumns) {
+            for (const col of possibleColumns) {
+                if (col in row && row[col] !== undefined && row[col] !== null && row[col] !== '') {
+                    return row[col];
+                }
+            }
+            return '';
+        }
+        
+        function displayResults(results) {
+            resultsTableBody.innerHTML = '';
+            
+            results.forEach(result => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 dark:hover:bg-dark-700 transition-colors';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${result.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        ${result.nombre} ${result.apellido}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${result.documento}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex flex-wrap gap-1">
+                            ${result.alerts.map(type => `
+                                <span class="${getAlertBadgeClass(type)}">${type}</span>
+                            `).join('')}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${getLevelBadgeClass(result.level)}">
+                            ${result.level}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">${result.actions.join('; ')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${result.achievement}</td>
+                `;
+                resultsTableBody.appendChild(row);
+            });
+        }
+        
+        function getLevelBadgeClass(level) {
+            switch(level) {
+                case 'Urgencia': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+                case 'Alta': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+                case 'Media': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+                case 'Baja': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+                case 'Protectoras': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+                default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+            }
+        }
+        
+        function showTemplatesModal() {
+            templatesModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            updateTemplatesList();
+        }
+        
+        function hideTemplatesModal() {
+            templatesModal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        
+        function updateTemplatesList() {
+            templatesList.innerHTML = '';
+            
+            if (templates.length === 0) {
+                templatesList.innerHTML = `
+                    <div class="text-center py-8">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="mt-2 text-lg font-medium text-gray-900 dark:text-white">No hay plantillas guardadas</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Guarda tu primera plantilla para comenzar.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            templates.forEach((template, index) => {
+                const templateElement = document.createElement('div');
+                templateElement.className = 'bg-white dark:bg-dark-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm card-hover';
+                templateElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-sm font-medium text-gray-800 dark:text-white truncate">${template.name}</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                ${template.rules.length} reglas · ${new Date(template.createdAt).toLocaleDateString()}
+                            </p>
+                            <div class="flex flex-wrap gap-1 mt-2">
+                                ${getUniqueAlertTypes(template.rules).map(type => `
+                                    <span class="${getAlertBadgeClass(type)}">${type}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="flex space-x-1 ml-2">
+                            <button class="load-template p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 rounded-full" data-index="${index}" title="Cargar">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                            </button>
+                            <button class="delete-template p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 rounded-full" data-index="${index}" title="Eliminar">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                templatesList.appendChild(templateElement);
+            });
+            
+            // Añadir event listeners para los botones de cargar y eliminar plantillas
+            document.querySelectorAll('.load-template').forEach(btn => {
+                btn.addEventListener('click', (e) => loadTemplate(e.target.closest('button').dataset.index));
+            });
+            
+            document.querySelectorAll('.delete-template').forEach(btn => {
+                btn.addEventListener('click', (e) => deleteTemplate(e.target.closest('button').dataset.index));
+            });
+        }
+        
+        function getUniqueAlertTypes(rules) {
+            const types = new Set();
+            rules.forEach(rule => {
+                rule.alertTypes.forEach(type => types.add(type));
+            });
+            return Array.from(types);
+        }
+        
+        function loadTemplate(index) {
+            if (templates[index]) {
+                rules = JSON.parse(JSON.stringify(templates[index].rules));
+                saveRulesToLocalStorage();
+                updateSavedRulesList();
+                hideTemplatesModal();
+                updateStats();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: 'Plantilla cargada correctamente',
+                    confirmButtonText: 'Entendido'
+                });
+            }
+        }
+        
+        function deleteTemplate(index) {
+            Swal.fire({
+                title: '¿Eliminar plantilla?',
+                text: "Esta acción no se puede deshacer",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    templates.splice(index, 1);
+                    localStorage.setItem('alertTemplates', JSON.stringify(templates));
+                    updateTemplatesList();
+                    updateStats();
+                    Swal.fire('Eliminada', 'La plantilla ha sido eliminada', 'success');
+                }
+            });
+        }
+        
+        function saveCurrentRulesAsTemplate() {
+            if (rules.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No hay reglas para guardar como plantilla',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+            
+            Swal.fire({
+                title: 'Guardar como plantilla',
+                input: 'text',
+                inputLabel: 'Nombre de la plantilla',
+                inputPlaceholder: 'Ej: Alertas por Hacinamiento',
+                showCancelButton: true,
+                confirmButtonText: 'Guardar',
+                cancelButtonText: 'Cancelar',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Debes ingresar un nombre para la plantilla';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const newTemplate = {
+                        name: result.value,
+                        rules: JSON.parse(JSON.stringify(rules)),
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    templates.push(newTemplate);
+                    localStorage.setItem('alertTemplates', JSON.stringify(templates));
+                    updateTemplatesList();
+                    updateStats();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: 'Plantilla guardada correctamente',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+            });
+        }
+        
+        function exportAlertsToExcel() {
+            if (!alertResults || alertResults.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No hay alertas generadas para exportar',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+            
+            try {
+                // Crear un nuevo libro de trabajo
+                const wb = XLSX.utils.book_new();
+                
+                // Dividir las alertas por tipo
+                const alertTypes = {
+                    Familiar: [],
+                    Individual: [],
+                    Colectiva: [],
+                    Poblacional: [],
+                    Intersectorial: [],
+                    Gestion: []
+                };
+                
+                // Organizar los datos por tipo de alerta
+                alertResults.forEach(alert => {
+                    alert.alerts.forEach(type => {
+                        if (alertTypes[type]) {
+                            alertTypes[type].push({
+                                'ID': alert.id,
+                                'Nombre': alert.nombre,
+                                'Apellido': alert.apellido,
+                                'Documento': alert.documento,
+                                'Fecha Nacimiento': alert.fechaNacimiento,
+                                'Municipio': alert.municipio,
+                                'Tipo Alerta': type,
+                                'Nivel Alerta': alert.level,
+                                'Acciones Inmediatas': alert.actions.join('; '),
+                                'Logro en Salud': alert.achievement
+                            });
+                        }
+                    });
+                });
+                
+                // Crear hojas para cada tipo de alerta que tenga datos
+                Object.entries(alertTypes).forEach(([type, data]) => {
+                    if (data.length > 0) {
+                        const ws = XLSX.utils.json_to_sheet(data);
+                        XLSX.utils.book_append_sheet(wb, ws, type);
+                    }
+                });
+                
+                // Generar el archivo Excel
+                const fileName = `alertas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: 'Alertas exportadas correctamente',
+                    confirmButtonText: 'Entendido'
+                });
+            } catch (error) {
+                console.error('Error al exportar alertas:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ocurrió un error al exportar las alertas',
+                    confirmButtonText: 'Entendido'
+                });
+            }
+        }
+        
+        function exportRulesToJson() {
+            if (rules.length === 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No hay reglas para exportar',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+            
+            try {
+                const dataStr = JSON.stringify(rules, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportName = `reglas_alertas_${new Date().toISOString().slice(0, 10)}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportName);
+                linkElement.click();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: 'Reglas exportadas correctamente',
+                    confirmButtonText: 'Entendido'
+                });
+            } catch (error) {
+                console.error('Error al exportar reglas:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ocurrió un error al exportar las reglas',
+                    confirmButtonText: 'Entendido'
+                });
+            }
+        }
+        
+        function importRulesFromJson(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedRules = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedRules)) {
+                        throw new Error('El archivo no contiene un arreglo de reglas válido');
+                    }
+                    
+                    Swal.fire({
+                        title: '¿Importar reglas?',
+                        html: `Se importarán <strong>${importedRules.length}</strong> reglas.<br><br>¿Deseas reemplazar las reglas actuales o agregarlas?`,
+                        icon: 'question',
+                        showDenyButton: true,
+                        showCancelButton: true,
+                        confirmButtonText: 'Reemplazar',
+                        denyButtonText: 'Agregar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Reemplazar reglas
+                            rules = importedRules;
+                            saveRulesToLocalStorage();
+                            updateSavedRulesList();
+                            updateStats();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Éxito',
+                                text: 'Reglas importadas y reemplazadas correctamente',
+                                confirmButtonText: 'Entendido'
+                            });
+                        } else if (result.isDenied) {
+                            // Agregar reglas
+                            rules = [...rules, ...importedRules];
+                            saveRulesToLocalStorage();
+                            updateSavedRulesList();
+                            updateStats();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Éxito',
+                                text: 'Reglas importadas y agregadas correctamente',
+                                confirmButtonText: 'Entendido'
+                            });
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error al importar reglas:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: 'El archivo no es un JSON válido o está corrupto<br><br><code>' + error.message + '</code>',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+            };
+            reader.onerror = function() {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al leer el archivo',
+                    confirmButtonText: 'Entendido'
+                });
+            };
+            reader.readAsText(file);
+            
+            // Resetear el input para permitir importar el mismo archivo otra vez
+            event.target.value = '';
+        }
+        
+        function clearAllData() {
+            Swal.fire({
+                title: '¿Limpiar todos los datos?',
+                html: "Esta acción eliminará:<br><br>" +
+                     "<ul class='text-left pl-5 list-disc'>" +
+                     "<li>Todas las reglas guardadas</li>" +
+                     "<li>Todos los resultados de alertas</li>" +
+                     "<li>El archivo Excel cargado</li>" +
+                     "</ul><br>" +
+                     "Esta acción no se puede deshacer",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, limpiar todo',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Limpiar datos
+                    workbookData = null;
+                    worksheetData = null;
+                    columns = [];
+                    rules = [];
+                    alertResults = [];
+                    
+                    // Limpiar localStorage
+                    localStorage.removeItem('alertRules');
+                    
+                    // Ocultar secciones
+                    columnsSection.classList.add('hidden');
+                    ruleFormSection.classList.add('hidden');
+                    resultsSection.classList.add('hidden');
+                    
+                    // Actualizar interfaz
+                    updateSavedRulesList();
+                    updateStats();
+                    
+                    // Resetear input de archivo
+                    fileInput.value = '';
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Datos limpiados',
+                        text: 'Todos los datos han sido eliminados',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+            });
+        }
+        
+        function updateStats() {
+            rulesCount.textContent = rules.length;
+            alertsCount.textContent = alertResults.length;
+            templatesCount.textContent = templates.length;
+            recordsCount.textContent = worksheetData ? worksheetData.length : 0;
+        }
+    </script>
+</body>
+</html>
